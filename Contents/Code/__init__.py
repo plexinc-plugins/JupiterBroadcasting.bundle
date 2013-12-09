@@ -1,26 +1,19 @@
-import json
-from StringIO import StringIO
-import urllib2 #need for HEAD requests
-import socket
-
 ARCHIVE_SUMMARY   = 'Archived / discontinued shows'
 ARCHIVE_THUMB     = 'jupiterbroadcasting.jpg'
 ARCHIVE_TITLE     = 'Archived Shows'
 JB_ART            = 'art-default.jpg'
-JB_FEED_URL       = 'http://vimcasts.org/episodes.json'
 JB_ICON           = 'icon-default.png'
 JB_PRODUCER       = 'Jupiter Broadcasting'
 LIVE_STREAM_THUMB = 'jupiterbroadcasting.jpg'
 LIVE_STREAM_TITLE = 'The Jupiter Broadcasting Live Stream'
 LIVE_STREAM_URL   = 'http://videocdn-us.geocdn.scaleengine.net/jblive-iphone/live/jblive.stream/playlist.m3u8'
-RE_PODTRAC_URL    = Regex('^http://www.podtrac.com/pts/redirect.mp4/(.*)$')
 TITLE             = 'Jupiter Broadcasting'
 USER_AGENT        = 'Plex Jupiter Broadcasting Channel'
 
 ###############################################################################
 def Start():
-    resetShowsCache()
-    resetArchivedShowsCache()
+    # resetShowsCache() # only when debuggin
+    # resetArchivedShowsCache() # only when debuggin
     Plugin.AddPrefixHandler("/video/jupiterbroadcasting", MainMenu, L('jupiterbroadcasting'), JB_ICON, JB_ART)
     Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
     Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
@@ -106,18 +99,11 @@ def ShowMenu(show_name, limit=None, offset=0):
         summary = entry.subtitle if entry.has_key('subtitle') else None
         thumb = entry.media_thumbnail[0]['url'] if entry.has_key('media_thumbnail') else R(show['image'])
         date = Datetime.ParseDate(entry.updated)
+        url = entry.enclosures[0]['href']
         if entry.has_key('itunes_duration'):
             duration = Datetime.MillisecondsFromString(entry.itunes_duration)
         else:
             duration = None
-        try:
-            url = getFinalUrl(entry.enclosures[0]['href'])
-        except urllib2.HTTPError as e:
-            Log.Warn("Problem with %s: %s" % (url, e.reason))
-            continue
-        except socket.timeout as e:
-            Log.Warn("%s took to long to complete" % url)
-            continue
 
         Log.Debug("url: %s" % url)
 
@@ -146,8 +132,7 @@ def getActiveShows():
     if not Data.Exists('shows'):
         Log.Debug('Loading shows from disk')
         data = Resource.Load('Shows.json', binary=False)
-        io = StringIO(data)
-        shows = json.load(io)
+        shows = JSON.ObjectFromString(data)
         Data.SaveObject('shows', shows)
     else:
         Log.Debug('Loading shows from cache')
@@ -159,35 +144,11 @@ def resetShowsCache():
     if Data.Exists('shows'):
         Data.Remove('shows')
 
-def getFinalUrl(url):
-    redirects = Dict['redirects']
-    if not redirects:
-        redirects = {}
-
-    if url not in redirects:
-        Log.Debug("Checking redirects for %s" % url)
-
-        m = RE_PODTRAC_URL.search(url)
-        if m:
-            final_url = "http://%s" % m.group(1)
-        else:
-            req = urllib2.Request(url, None, HTTP.Headers)
-            req.get_method = lambda: 'HEAD'
-            res = urllib2.urlopen(req, timeout=3.0)
-            final_url = res.geturl()
-
-        redirects = {url: final_url}
-        Dict['redirects'] = redirects
-        Dict.Save()
-
-    return redirects[url]
-
 def getArchivedShows():
     if not Data.Exists('archived_shows'):
         Log.Debug('Loading archived shows from disk')
         data = Resource.Load('ArchivedShows.json', binary=False)
-        io = StringIO(data)
-        archived_shows = json.load(io)
+        archived_shows = JSON.ObjectFromString(data)
         Data.SaveObject('archived_shows', archived_shows)
     else:
         Log.Debug('Loading archived shows from cache')
@@ -245,7 +206,7 @@ def createEpisodeObject(url, title, summary, thumb, rating_key, originally_avail
         items = [
             MediaObject(
                 parts = [
-                    PartObject(key=url)
+                    PartObject(key=Callback(PlayVideo, url=url))
                 ],
                 container = container,
                 video_codec = video_codec,
@@ -259,3 +220,8 @@ def createEpisodeObject(url, title, summary, thumb, rating_key, originally_avail
         return ObjectContainer(objects=[track_object])
     else:
         return track_object
+
+@indirect
+def PlayVideo(url):
+    return IndirectResponse(VideoClipObject, key=url)
+    # return IndirectResponse(VideoClipObject, key=getFinalUrl(url))
