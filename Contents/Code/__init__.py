@@ -176,7 +176,13 @@ def getShowEpisodes(show):
     return RSS.FeedFromURL(show['feed'])
 
 def createEpisodeObject(url, title, summary, thumb, rating_key, originally_available_at=None, duration=None, show_name=None, include_container=False):
-    container = Container.MP4
+    if '.m3u8' in url:
+        container = 'mpegts'
+        protocol = 'hls'
+    else:
+        container = Container.MP4
+        protocol = None
+
     video_codec = VideoCodec.H264
     audio_codec = AudioCodec.AAC
     audio_channels = 2
@@ -209,6 +215,7 @@ def createEpisodeObject(url, title, summary, thumb, rating_key, originally_avail
                     PartObject(key=Callback(PlayVideo, url=url))
                 ],
                 container = container,
+                protocol = protocol,
                 video_codec = video_codec,
                 audio_codec = audio_codec,
                 audio_channels = audio_channels,
