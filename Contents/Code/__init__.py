@@ -179,9 +179,11 @@ def createEpisodeObject(url, title, summary, thumb, rating_key, originally_avail
     if '.m3u8' in url:
         container = 'mpegts'
         protocol = 'hls'
+        video_resolution = '720'
     else:
         container = Container.MP4
         protocol = None
+        video_resolution = '480'
 
     video_codec = VideoCodec.H264
     audio_codec = AudioCodec.AAC
@@ -217,6 +219,7 @@ def createEpisodeObject(url, title, summary, thumb, rating_key, originally_avail
                 container = container,
                 protocol = protocol,
                 video_codec = video_codec,
+                video_resolution = video_resolution,
                 audio_codec = audio_codec,
                 audio_channels = audio_channels,
             )
