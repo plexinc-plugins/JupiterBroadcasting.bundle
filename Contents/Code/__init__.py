@@ -14,13 +14,9 @@ USER_AGENT        = 'Plex Jupiter Broadcasting Channel'
 def Start():
     # resetShowsCache() # only when debuggin
     # resetArchivedShowsCache() # only when debuggin
-    Plugin.AddPrefixHandler("/video/jupiterbroadcasting", MainMenu, L('jupiterbroadcasting'), JB_ICON, JB_ART)
-    Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
-    Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
 
     # Set up containers for all possible objects
     ObjectContainer.title1 = TITLE
-    ObjectContainer.view_group = 'InfoList'
     ObjectContainer.art = R(JB_ART)
     DirectoryObject.thumb = R(JB_ICON)
     DirectoryObject.art = R(JB_ART)
@@ -64,7 +60,7 @@ def MainMenu():
 
 @route('/video/jupiterbroadcasting/archive')
 def ArchiveMenu():
-    oc = ObjectContainer(title2='Archive', view_group='InfoList')
+    oc = ObjectContainer(title2='Archive')
 
     for show in getArchivedShows():
         show_name = show['name']
@@ -80,7 +76,7 @@ def ArchiveMenu():
 def ShowMenu(show_name, limit=None, offset=0):
     show = getShow(show_name)
     rss = getShowEpisodes(show)
-    oc = ObjectContainer(title2=show_name, view_group='InfoList')
+    oc = ObjectContainer(title2=show_name)
     offset = int(offset)
 
     if limit == None:
